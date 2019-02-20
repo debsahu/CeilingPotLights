@@ -361,7 +361,7 @@ void sendAutoDiscovery(void)
 {
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
   {
-    String dt = "homeassistant/switch/" + String(HOSTNAME) + String(i + 1) + "/config";
+    String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
     sendAutoDiscoverySwitch(String(i + 1), dt);
   }
 }
