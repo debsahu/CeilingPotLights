@@ -100,7 +100,7 @@ input:not(:checked) ~ p:nth-of-type(2) {
 }
 
 .wrap .half {
-  width: 50%;
+  width: 25%;
   padding: 12px 0;
   align-items: left;
   justify-content: left;
@@ -120,4 +120,45 @@ input:not(:checked) ~ p:nth-of-type(2) {
   line-height: 50px;
   padding: 10px;
   display: inline-block;
+}
+
+.slidecontainer  {
+  width: 100%;
+}
+
+.slidecontainer .general {
+-webkit-appearance: none;
+width: 70%;
+height: 29px;
+border-radius: 100px;   
+stroke-width: 1;
+background: linear-gradient(to left, #ffffff 0%, #000000 100%);
+border: 1px solid #ffffff;
+box-shadow: 0.4px 0.4px 0.4px #000031, 0px 0px 0.4px #00004b;
+outline: none;
+opacity: 0.7;
+-webkit-transition: .2s;
+transition: opacity .2s;
+}
+
+.slidecontainer .general::-webkit-slider-thumb {
+-webkit-appearance: none;
+appearance: none;
+width: 20px;
+height: 20px;
+border-radius: 50%; 
+border: 3px solid #ffffff;
+box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+fill: none;
+cursor: pointer;
+}
+
+.slidecontainer .general::-moz-range-thumb {
+width: 20px;
+height: 20px;
+border-radius: 50%;
+border: 3px solid #ffffff;
+box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+fill: none;
+cursor: pointer;
 }
