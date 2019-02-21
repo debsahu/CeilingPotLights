@@ -299,7 +299,7 @@ void sendMQTTStatusMsg(void)
   Serial.print(light_topic_out);
   Serial.print(F("] >> "));
   Serial.println(statusMsg());
-  client.publish(light_topic_out, statusMsg());
+  client.publish(light_topic_out, statusMsg(), true, 0);
   sendStat.detach();
 }
 
@@ -312,40 +312,36 @@ void messageReceived(String &topic, String &payload)
 void sendAutoDiscoverySwitch(String index, String &discovery_topic)
 {
   /*
-  "discovery topic" >> "homeassistant/switch/XXXXXXXXXXXXXXXX/config"
+  "discovery topic" >> "homeassistant/light/XXXXXXXXXXXXXXXX/config"
 
   Sending data that looks like this >>
   {
     "name":"lights1",
-    "schema":"json",
+    "schema":"template",
     "state_topic": "home/aabbccddeeff/out",
     "command_topic": "home/aabbccddeeff/in",
-    "brightness": true,
     "brightness_template": "{{ value_json.light1b }}",
-    "command_on_template":"{'light':1,'state':'ON','brightness':{{ brightness|d }} }",
+    "command_on_template":"{'light':1,'state':'ON'{%- if brightness is defined -%},'brightness':{{ brightness|d }}{%- endif -%} }",
     "command_off_template":"{'light':1,'state':'OFF'}",
     "state_template": "{{ value_json.light1 }}",
     "optimistic": false,
-    "qos": 0,
-    "retain": true
+    "qos": 0
   }
   */
 
-  const size_t capacity = JSON_OBJECT_SIZE(12) + 700;
+  const size_t capacity = JSON_OBJECT_SIZE(10) + 700;
   DynamicJsonDocument json(capacity);
 
   json["name"] = String(HOSTNAME) + " " + index;
-  json["schema"] = "json";
+  json["schema"] = "template";
   json["state_topic"] = light_topic_out;
   json["command_topic"] = light_topic_in;
-  json["brightness"] = "true";
   json["brightness_template"] = "{{value_json.light" + index + "b}}";
-  json["command_on_template"] = "{'light':" + index + ",'state':'ON','brightness':{{ brightness|d }} }";
-  json["command_off_template"] = "{'light':" + index + ",'state':'OFF','brightness':0}";
+  json["command_on_template"] = "{'light':" + index + ",'state':'ON'{%- if brightness is defined -%},'brightness':{{ brightness|d }}{%- endif -%}}";
+  json["command_off_template"] = "{'light':" + index + ",'state':'OFF'}";
   json["state_template"] = "{{value_json.light" + index + "}}";
   json["optimistic"] = false;
   json["qos"] = 0;
-  json["retain"] = true;
 
   String msg_str;
   Serial.print(F("Sending AD MQTT ["));
@@ -361,7 +357,7 @@ void sendAutoDiscovery(void)
 {
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
   {
-    String dt = "homeassistant/switch/" + String(HOSTNAME) + String(i + 1) + "/config";
+    String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
     sendAutoDiscoverySwitch(String(i + 1), dt);
   }
 }
