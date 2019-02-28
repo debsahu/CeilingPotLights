@@ -19,7 +19,7 @@
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define HOSTNAME "HolidayLights"
+#define HOSTNAME "CeilingLights2"
 
 #define MAX_DEVICES 8
 
@@ -33,7 +33,7 @@ uint8_t light_pin[MAX_DEVICES] = {16, 4, 17, 13, 5, 14, 27, 26};
 const uint8_t light_bri_cycle[] = {15, 95, 175, 255};
 
 const uint8_t switchPin = 22;
-#define BUTTON_PRESS_THRESHOLD_MS 200
+#define BUTTON_PRESS_THRESHOLD_MS 1200
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -353,14 +353,14 @@ void sendAutoDiscoverySwitch(String index, String &discovery_topic)
   Serial.println();
 }
 
-void sendAutoDiscovery(void)
-{
-  for (uint8_t i = 0; i < MAX_DEVICES; i++)
-  {
-    String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
-    sendAutoDiscoverySwitch(String(i + 1), dt);
-  }
-}
+// void sendAutoDiscovery(void)
+// {
+//   for (uint8_t i = 0; i < MAX_DEVICES; i++)
+//   {
+//     String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
+//     sendAutoDiscoverySwitch(String(i + 1), dt);
+//   }
+// }
 
 void connect_mqtt(void)
 {
@@ -386,7 +386,7 @@ void connect_mqtt(void)
 
   // we are here only after sucessful MQTT connect
   client.subscribe(light_topic_in);      //subscribe to incoming topic
-  sendAutoDiscovery();                   //send auto-discovery topics
+  // sendAutoDiscovery();                   //send auto-discovery topics
   sendStat.attach(2, sendMQTTStatusMsg); //send status of switches
 }
 
@@ -637,8 +637,8 @@ void setup()
   byte mac[6];
   WiFi.macAddress(mac);
   sprintf(mqtt_client_name, "%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], HOSTNAME);
-  sprintf(light_topic_in, "home/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/in");
-  sprintf(light_topic_out, "home/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/out");
+  sprintf(light_topic_in, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/in");
+  sprintf(light_topic_out, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/out");
 
   client.begin(mqtt_server, atoi(mqtt_port), net);
   client.onMessage(messageReceived);
