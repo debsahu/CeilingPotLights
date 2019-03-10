@@ -21,14 +21,14 @@
 
 #define HOSTNAME "CeilingLights"
 
-#define MAX_DEVICES 8
+#define MAX_DEVICES 9
 
 char mqtt_server[40] = "192.168.0.xxx";
 char mqtt_username[40] = "";
 char mqtt_password[40] = "";
 char mqtt_port[6] = "1883";
 
-uint8_t light_pin[MAX_DEVICES] = {16, 4, 17, 13, 5, 14, 27, 26};
+uint8_t light_pin[MAX_DEVICES] = {16, 4, 32, 33, 5, 14, 27, 26};
 
 const uint8_t light_bri_cycle[] = {15, 95, 175, 255};
 
@@ -124,7 +124,6 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 }
 
 // /*****************  EEPROM to save light state *****************************/
-
 int eeprom_addr = 0;
 
 void writeEEPROM(void)
@@ -363,7 +362,7 @@ void sendAutoDiscoverySwitch(String index, String &discovery_topic)
 // }
 
 void connect_mqtt(void)
-{
+{  
   Serial.print(F("Checking wifi "));
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -372,7 +371,7 @@ void connect_mqtt(void)
   }
   Serial.println(F(" connected!"));
 
-  uint8_t retries = 0;
+uint8_t retries = 0;
   Serial.print(F("Connecting MQTT "));
   while (!client.connect(mqtt_client_name, mqtt_username, mqtt_password) and retries < 15)
   {
