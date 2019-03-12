@@ -69,6 +69,8 @@ bool shouldReboot = false;
 uint8_t brightness_index = 0;
 uint8_t light_bri_cycle_max = sizeof(light_bri_cycle)/sizeof(*light_bri_cycle);
 
+bool disconnected = false;
+
 void saveConfigCallback()
 {
   Serial.println("Should save config");
@@ -124,6 +126,7 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 }
 
 // /*****************  EEPROM to save light state *****************************/
+
 int eeprom_addr = 0;
 
 void writeEEPROM(void)
@@ -262,7 +265,7 @@ void processJson(String &payload)
     index--;
     if (index >= MAX_DEVICES)
       return;
-    
+
     if(root.containsKey("state"))
     {
       String stateValue = jsonBuffer["state"];
@@ -362,28 +365,26 @@ void sendAutoDiscoverySwitch(String index, String &discovery_topic)
 // }
 
 void connect_mqtt(void)
-{  
+{
+  // Make sure the WiFi is connected, otherwise we know the MQTT won't connect
   Serial.print(F("Checking wifi "));
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.print(F("."));
-    delay(1000);
+  if (WiFi.status() != WL_CONNECTED) {
+    delay(1000);    
+    // Not connected
+    return;
   }
-  Serial.println(F(" connected!"));
 
-uint8_t retries = 0;
-  Serial.print(F("Connecting MQTT "));
-  while (!client.connect(mqtt_client_name, mqtt_username, mqtt_password) and retries < 15)
-  {
-    Serial.print(".");
-    delay(5000);
-    retries++;
+  // Attempt to connect once
+  Serial.println(F(" connected!"));
+  Serial.println(F("Attempting MQTT connection..."));
+  if (!client.connect(mqtt_client_name, mqtt_username, mqtt_password)) {
+    // Failed to connect
+    return;
   }
-  if (!client.connected())
-    ESP.restart();
-  Serial.println(F(" connected!"));
 
-  // we are here only after sucessful MQTT connect
+  disconnected = false;
+  Serial.println(F("MQTT connected!"));
+
   client.subscribe(light_topic_in);      //subscribe to incoming topic
   // sendAutoDiscovery();                   //send auto-discovery topics
   sendStat.attach(2, sendMQTTStatusMsg); //send status of switches
@@ -613,6 +614,7 @@ void setup()
   wifiManager.addParameter(&custom_mqtt_username);
   wifiManager.addParameter(&custom_mqtt_password);
 
+  wifiManager.setConnectTimeout(60);
   if (!wifiManager.autoConnect(HOSTNAME))
   {
     Serial.println(F("failed to connect and hit timeout"));
@@ -729,6 +731,8 @@ void setup()
 
 // /*****************  MAIN LOOP  ****************************************/
 
+uint32_t reconnect_delay = 0;
+
 void loop()
 {
   if (shouldUpdateLights)
@@ -746,8 +750,19 @@ void loop()
     ESP.restart();
   }
 
-  if (!client.connected())
-    connect_mqtt();
-  else
+  if (!client.connected()) {
+    if (!disconnected) {
+      disconnected = true;
+      Serial.println(F("MQTT disconnected."));
+    }
+    if (reconnect_delay == 0) {
+      connect_mqtt();
+      reconnect_delay = 5000;
+    } else {
+      reconnect_delay--;
+      delay(1);  // small delay so it doesn't spam check
+    }
+  } else {
     client.loop();
+  }
 }
