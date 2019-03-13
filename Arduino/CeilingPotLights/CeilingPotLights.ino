@@ -19,21 +19,21 @@
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define HOSTNAME "HolidayLights"
+#define HOSTNAME "CeilingLights"
 
-#define MAX_DEVICES 8
+#define MAX_DEVICES 9
 
 char mqtt_server[40] = "192.168.0.xxx";
 char mqtt_username[40] = "";
 char mqtt_password[40] = "";
 char mqtt_port[6] = "1883";
 
-uint8_t light_pin[MAX_DEVICES] = {16, 4, 17, 13, 5, 14, 27, 26};
+uint8_t light_pin[MAX_DEVICES] = {16, 4, 32, 33, 5, 14, 27, 26};
 
 const uint8_t light_bri_cycle[] = {15, 95, 175, 255};
 
 const uint8_t switchPin = 22;
-#define BUTTON_PRESS_THRESHOLD_MS 200
+#define BUTTON_PRESS_THRESHOLD_MS 1200
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -68,6 +68,8 @@ bool shouldReboot = false;
 
 uint8_t brightness_index = 0;
 uint8_t light_bri_cycle_max = sizeof(light_bri_cycle)/sizeof(*light_bri_cycle);
+
+bool disconnected = false;
 
 void saveConfigCallback()
 {
@@ -263,7 +265,7 @@ void processJson(String &payload)
     index--;
     if (index >= MAX_DEVICES)
       return;
-    
+
     if(root.containsKey("state"))
     {
       String stateValue = jsonBuffer["state"];
@@ -353,40 +355,38 @@ void sendAutoDiscoverySwitch(String index, String &discovery_topic)
   Serial.println();
 }
 
-void sendAutoDiscovery(void)
-{
-  for (uint8_t i = 0; i < MAX_DEVICES; i++)
-  {
-    String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
-    sendAutoDiscoverySwitch(String(i + 1), dt);
-  }
-}
+// void sendAutoDiscovery(void)
+// {
+//   for (uint8_t i = 0; i < MAX_DEVICES; i++)
+//   {
+//     String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
+//     sendAutoDiscoverySwitch(String(i + 1), dt);
+//   }
+// }
 
 void connect_mqtt(void)
 {
+  // Make sure the WiFi is connected, otherwise we know the MQTT won't connect
   Serial.print(F("Checking wifi "));
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.print(F("."));
-    delay(1000);
+  if (WiFi.status() != WL_CONNECTED) {
+    delay(1000);    
+    // Not connected
+    return;
   }
-  Serial.println(F(" connected!"));
 
-  uint8_t retries = 0;
-  Serial.print(F("Connecting MQTT "));
-  while (!client.connect(mqtt_client_name, mqtt_username, mqtt_password) and retries < 15)
-  {
-    Serial.print(".");
-    delay(5000);
-    retries++;
+  // Attempt to connect once
+  Serial.println(F(" connected!"));
+  Serial.println(F("Attempting MQTT connection..."));
+  if (!client.connect(mqtt_client_name, mqtt_username, mqtt_password)) {
+    // Failed to connect
+    return;
   }
-  if (!client.connected())
-    ESP.restart();
-  Serial.println(F(" connected!"));
 
-  // we are here only after sucessful MQTT connect
+  disconnected = false;
+  Serial.println(F("MQTT connected!"));
+
   client.subscribe(light_topic_in);      //subscribe to incoming topic
-  sendAutoDiscovery();                   //send auto-discovery topics
+  // sendAutoDiscovery();                   //send auto-discovery topics
   sendStat.attach(2, sendMQTTStatusMsg); //send status of switches
 }
 
@@ -614,6 +614,7 @@ void setup()
   wifiManager.addParameter(&custom_mqtt_username);
   wifiManager.addParameter(&custom_mqtt_password);
 
+  wifiManager.setConnectTimeout(60);
   if (!wifiManager.autoConnect(HOSTNAME))
   {
     Serial.println(F("failed to connect and hit timeout"));
@@ -637,8 +638,8 @@ void setup()
   byte mac[6];
   WiFi.macAddress(mac);
   sprintf(mqtt_client_name, "%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], HOSTNAME);
-  sprintf(light_topic_in, "home/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/in");
-  sprintf(light_topic_out, "home/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/out");
+  sprintf(light_topic_in, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/in");
+  sprintf(light_topic_out, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/out");
 
   client.begin(mqtt_server, atoi(mqtt_port), net);
   client.onMessage(messageReceived);
@@ -730,6 +731,8 @@ void setup()
 
 // /*****************  MAIN LOOP  ****************************************/
 
+uint32_t reconnect_delay = 0;
+
 void loop()
 {
   if (shouldUpdateLights)
@@ -747,8 +750,19 @@ void loop()
     ESP.restart();
   }
 
-  if (!client.connected())
-    connect_mqtt();
-  else
+  if (!client.connected()) {
+    if (!disconnected) {
+      disconnected = true;
+      Serial.println(F("MQTT disconnected."));
+    }
+    if (reconnect_delay == 0) {
+      connect_mqtt();
+      reconnect_delay = 5000;
+    } else {
+      reconnect_delay--;
+      delay(1);  // small delay so it doesn't spam check
+    }
+  } else {
     client.loop();
+  }
 }
