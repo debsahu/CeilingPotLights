@@ -8,6 +8,7 @@
 #include <EEPROM.h>
 #include <Ticker.h>
 #include <ArduinoOTA.h>
+#include <DNSServer.h>
 #include "version.h"
 
 ///////// External Libraries///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -21,12 +22,15 @@
 
 #define HOSTNAME "CeilingLights"
 
-#define MAX_DEVICES 9
+#define MAX_DEVICES 8
 
 char mqtt_server[40] = "192.168.0.xxx";
 char mqtt_username[40] = "";
 char mqtt_password[40] = "";
 char mqtt_port[6] = "1883";
+
+char AP_PASS[32] = "TouchLights"; // AP Password
+const byte DNS_PORT = 53;
 
 uint8_t light_pin[MAX_DEVICES] = {16, 4, 32, 33, 5, 14, 27, 26};
 
@@ -45,6 +49,7 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 WiFiClient net;
 MQTTClient client(512);
 Ticker sendStat;
+DNSServer dns;
 
 /*****************  GLOBAL VARIABLES  ************************************/
 
@@ -66,10 +71,13 @@ bool shouldSaveConfig = false;
 bool shouldUpdateLights = false;
 bool shouldReboot = false;
 
+unsigned long lastMillis = 0;
+char NameChipId[64] = {0}, chipId[9] = {0};
+
+IPAddress apIP(192, 168, 4, 1);
+
 uint8_t brightness_index = 0;
 uint8_t light_bri_cycle_max = sizeof(light_bri_cycle)/sizeof(*light_bri_cycle);
-
-bool disconnected = false;
 
 void saveConfigCallback()
 {
@@ -206,14 +214,14 @@ String statusMsg(void)
   /*
   Will send out something like this:
   {
-    "light1":"off",
-    "light2":"off",
-    "light3":"off",
-    "light4":"off",
-    "light5":"off",
-    "light6":"off",
-    "light7":"off",
-    "light8":"off",
+    "light1":"OFF",
+    "light2":"OFF",
+    "light3":"OFF",
+    "light4":"OFF",
+    "light5":"OFF",
+    "light6":"OFF",
+    "light7":"OFF",
+    "light8":"OFF",
     "light1b": 255,
     "light2b": 255,
     "light3b": 255,
@@ -221,16 +229,15 @@ String statusMsg(void)
     "light5b": 255,
     "light6b": 255,
     "light7b": 255,
-    "light8b": 255,
-    "light9b": 255
+    "light8b": 255
   }
   */
 
-  DynamicJsonDocument json(JSON_OBJECT_SIZE(MAX_DEVICES*2) + 100);
+  DynamicJsonDocument json(JSON_OBJECT_SIZE(MAX_DEVICES*2) + 600);
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
   {
     String l_name = "light" + String(i + 1);
-    json[l_name] = (Light[i].state) ? "on" : "off";
+    json[l_name] = (Light[i].state) ? "ON" : "OFF";
     String l_bri = l_name + "b";
     json[l_bri] = Light[i].brightness;
   }
@@ -323,7 +330,7 @@ void sendAutoDiscoverySwitch(String index, String &discovery_topic)
     "state_topic": "home/aabbccddeeff/out",
     "command_topic": "home/aabbccddeeff/in",
     "brightness_template": "{{ value_json.light1b }}",
-    "command_on_template":"{'light':1,'state':'ON'{%- if brightness is defined -%},'brightness':{{ brightness|d }}{%- endif -%} }",
+    "command_on_template":"{'light':1,'state':'ON'{%- if brightness is defined -%},'brightness':{{ brightness|d }}{%- endif -%}}",
     "command_off_template":"{'light':1,'state':'OFF'}",
     "state_template": "{{ value_json.light1 }}",
     "optimistic": false,
@@ -355,38 +362,39 @@ void sendAutoDiscoverySwitch(String index, String &discovery_topic)
   Serial.println();
 }
 
-// void sendAutoDiscovery(void)
-// {
-//   for (uint8_t i = 0; i < MAX_DEVICES; i++)
-//   {
-//     String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
-//     sendAutoDiscoverySwitch(String(i + 1), dt);
-//   }
-// }
+void sendAutoDiscovery(void)
+{
+  for (uint8_t i = 0; i < MAX_DEVICES; i++)
+  {
+    String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
+    sendAutoDiscoverySwitch(String(i + 1), dt);
+  }
+}
 
 void connect_mqtt(void)
 {
   // Make sure the WiFi is connected, otherwise we know the MQTT won't connect
   Serial.print(F("Checking wifi "));
   if (WiFi.status() != WL_CONNECTED) {
-    delay(1000);    
+    WiFi.begin();
     // Not connected
+    Serial.println(F("not connected!"));
     return;
   }
 
   // Attempt to connect once
-  Serial.println(F(" connected!"));
-  Serial.println(F("Attempting MQTT connection..."));
+  Serial.println(F("connected!"));
+  Serial.print(F("Attempting MQTT connection..."));
   if (!client.connect(mqtt_client_name, mqtt_username, mqtt_password)) {
     // Failed to connect
+    Serial.println(F("not connected!"));
     return;
   }
 
-  disconnected = false;
-  Serial.println(F("MQTT connected!"));
+  Serial.println(F("connected!"));
 
   client.subscribe(light_topic_in);      //subscribe to incoming topic
-  // sendAutoDiscovery();                   //send auto-discovery topics
+  sendAutoDiscovery();                   //send auto-discovery topics
   sendStat.attach(2, sendMQTTStatusMsg); //send status of switches
 }
 
@@ -592,8 +600,7 @@ void setup()
   if (readConfigFS())
     Serial.println(F(" yay!"));
 
-  char NameChipId[64] = {0}, chipId[9] = {0};
-  WiFi.mode(WIFI_STA); // Make sure you're in station mode
+  WiFi.mode(WIFI_AP_STA); // Make sure you're in station mode
 
   WiFi.setHostname(HOSTNAME);
   snprintf(chipId, sizeof(chipId), "%08x", (uint32_t)ESP.getEfuseMac());
@@ -617,12 +624,25 @@ void setup()
   wifiManager.setConnectTimeout(60);
   if (!wifiManager.autoConnect(HOSTNAME))
   {
-    Serial.println(F("failed to connect and hit timeout"));
-    delay(3000);
-    ESP.restart();
-    delay(5000);
+    Serial.println(F("Failed to connect and hit timeout"));
+    // delay(3000);
+    // ESP.restart();
+    // delay(5000);
   }
-  Serial.println(F("connected!"));
+  else
+  {
+    Serial.println(F("---------------------------------------"));
+    Serial.print(F("Router IP: "));
+    Serial.println(WiFi.localIP());
+  }
+
+  Serial.println(F("---------------------------------------"));
+
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+  WiFi.softAP(NameChipId, AP_PASS);
+  Serial.print(F("HotSpt IP: "));
+  Serial.println(WiFi.softAPIP());
+  dns.start(DNS_PORT, "*", WiFi.softAPIP());
 
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
@@ -731,8 +751,6 @@ void setup()
 
 // /*****************  MAIN LOOP  ****************************************/
 
-uint32_t reconnect_delay = 0;
-
 void loop()
 {
   if (shouldUpdateLights)
@@ -751,16 +769,10 @@ void loop()
   }
 
   if (!client.connected()) {
-    if (!disconnected) {
-      disconnected = true;
-      Serial.println(F("MQTT disconnected."));
-    }
-    if (reconnect_delay == 0) {
+    if (millis() - lastMillis > 5000 or !lastMillis)
+    {
+      lastMillis = millis();
       connect_mqtt();
-      reconnect_delay = 5000;
-    } else {
-      reconnect_delay--;
-      delay(1);  // small delay so it doesn't spam check
     }
   } else {
     client.loop();
