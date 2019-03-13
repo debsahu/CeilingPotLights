@@ -4,6 +4,8 @@ var wsc;
 
 document.addEventListener("DOMContentLoaded", function(){
     wsc = new ReconnectingWebSocket('ws://' + window.location.hostname + ':81');
+    //wsc = new ReconnectingWebSocket('ws://echo.websocket.org');
+    
     wsc.timeoutInterval = 3000;
 
     wsc.onopen = function (e) {
@@ -55,21 +57,21 @@ document.addEventListener("DOMContentLoaded", function(){
         }
 
         document.getElementById("brightness1").value = Math.round(switchstatus.light1b/ 2.55);
-        document.getElementById("br1").innerHTML = Math.round(ledstatus.light1b / 2.55);
+        document.getElementById("br1").innerHTML = Math.round(switchstatus.light1b / 2.55);
         document.getElementById("brightness2").value = Math.round(switchstatus.light2b/ 2.55);
-        document.getElementById("br2").innerHTML = Math.round(ledstatus.light2b / 2.55);
+        document.getElementById("br2").innerHTML = Math.round(switchstatus.light2b / 2.55);
         document.getElementById("brightness3").value = Math.round(switchstatus.light3b/ 2.55);
-        document.getElementById("br3").innerHTML = Math.round(ledstatus.light3b / 2.55);
+        document.getElementById("br3").innerHTML = Math.round(switchstatus.light3b / 2.55);
         document.getElementById("brightness4").value = Math.round(switchstatus.light4b/ 2.55);
-        document.getElementById("br4").innerHTML = Math.round(ledstatus.light4b / 2.55);
+        document.getElementById("br4").innerHTML = Math.round(switchstatus.light4b / 2.55);
         document.getElementById("brightness5").value = Math.round(switchstatus.light5b/ 2.55);
-        document.getElementById("br5").innerHTML = Math.round(ledstatus.light5b / 2.55);
+        document.getElementById("br5").innerHTML = Math.round(switchstatus.light5b / 2.55);
         document.getElementById("brightness6").value = Math.round(switchstatus.light6b/ 2.55);
-        document.getElementById("br6").innerHTML = Math.round(ledstatus.light6b / 2.55);
+        document.getElementById("br6").innerHTML = Math.round(switchstatus.light6b / 2.55);
         document.getElementById("brightness7").value = Math.round(switchstatus.light7b/ 2.55);
-        document.getElementById("br7").innerHTML = Math.round(ledstatus.light7b / 2.55);
+        document.getElementById("br7").innerHTML = Math.round(switchstatus.light7b / 2.55);
         document.getElementById("brightness8").value = Math.round(switchstatus.light8b/ 2.55);
-        document.getElementById("br8").innerHTML = Math.round(ledstatus.light8b / 2.55);
+        document.getElementById("br8").innerHTML = Math.round(switchstatus.light8b / 2.55);
     }
 
     document.getElementById("onoff1").onchange = function () {
