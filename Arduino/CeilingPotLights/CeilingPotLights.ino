@@ -37,7 +37,10 @@ uint8_t light_pin[MAX_DEVICES] = {16, 4, 32, 33, 5, 14, 27, 26};
 const uint8_t light_bri_cycle[] = {15, 95, 175, 255};
 
 const uint8_t switchPin = 22;
+
 #define BUTTON_PRESS_THRESHOLD_MS 1200
+
+// #define HA_AUTO_DISCOVERY
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -214,14 +217,14 @@ String statusMsg(void)
   /*
   Will send out something like this:
   {
-    "light1":"OFF",
-    "light2":"OFF",
-    "light3":"OFF",
-    "light4":"OFF",
-    "light5":"OFF",
-    "light6":"OFF",
-    "light7":"OFF",
-    "light8":"OFF",
+    "light1":"off",
+    "light2":"off",
+    "light3":"off",
+    "light4":"off",
+    "light5":"off",
+    "light6":"off",
+    "light7":"off",
+    "light8":"off",
     "light1b": 255,
     "light2b": 255,
     "light3b": 255,
@@ -237,7 +240,7 @@ String statusMsg(void)
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
   {
     String l_name = "light" + String(i + 1);
-    json[l_name] = (Light[i].state) ? "ON" : "OFF";
+    json[l_name] = (Light[i].state) ? "on" : "off";
     String l_bri = l_name + "b";
     json[l_bri] = Light[i].brightness;
   }
@@ -295,6 +298,8 @@ void processJson(String &payload)
     if(root.containsKey("brightness"))
     {
       Light[index].brightness = (uint8_t) jsonBuffer["brightness"];
+      if(!Light[index].brightness) // When brightness is 0, turn off light
+        Light[index].state = false;
       shouldUpdateLights = true;
       sendMQTTStatusMsg();
       webSocket.broadcastTXT(statusMsg().c_str());
@@ -318,7 +323,8 @@ void messageReceived(String &topic, String &payload)
   processJson(payload);
 }
 
-void sendAutoDiscoverySwitch(String index, String &discovery_topic)
+#ifdef HA_AUTO_DISCOVERY
+void sendAutoDiscoverySingle(String index, String &discovery_topic)
 {
   /*
   "discovery topic" >> "homeassistant/light/XXXXXXXXXXXXXXXX/config"
@@ -367,9 +373,10 @@ void sendAutoDiscovery(void)
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
   {
     String dt = "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config";
-    sendAutoDiscoverySwitch(String(i + 1), dt);
+    sendAutoDiscoverySingle(String(i + 1), dt);
   }
 }
+#endif
 
 void connect_mqtt(void)
 {
@@ -394,7 +401,9 @@ void connect_mqtt(void)
   Serial.println(F("connected!"));
 
   client.subscribe(light_topic_in);      //subscribe to incoming topic
+#ifdef HA_AUTO_DISCOVERY
   sendAutoDiscovery();                   //send auto-discovery topics
+#endif
   sendStat.attach(2, sendMQTTStatusMsg); //send status of switches
 }
 

@@ -15,42 +15,42 @@ document.addEventListener("DOMContentLoaded", function(){
     wsc.onmessage = function (data, flags, number) {
         console.log('WebSocketClient message #${number}: ', data);
         var switchstatus = JSON.parse(data.data);
-        if(switchstatus.light1 == "ON") {
+        if(switchstatus.light1 == "on") {
             document.getElementById("onoff1").checked = true;
         } else {
             document.getElementById("onoff1").checked = false;
         }
-        if(switchstatus.light2 == "ON") {
+        if(switchstatus.light2 == "on") {
             document.getElementById("onoff2").checked = true;
         } else {
             document.getElementById("onoff2").checked = false;
         }
-        if(switchstatus.light3 == "ON") {
+        if(switchstatus.light3 == "on") {
             document.getElementById("onoff3").checked = true;
         } else {
             document.getElementById("onoff3").checked = false;
         }
-        if(switchstatus.light4 == "ON") {
+        if(switchstatus.light4 == "on") {
             document.getElementById("onoff4").checked = true;
         } else {
             document.getElementById("onoff4").checked = false;
         }
-        if(switchstatus.light5 == "ON") {
+        if(switchstatus.light5 == "on") {
             document.getElementById("onoff5").checked = true;
         } else {
             document.getElementById("onoff5").checked = false;
         }
-        if(switchstatus.light6 == "ON") {
+        if(switchstatus.light6 == "on") {
             document.getElementById("onoff6").checked = true;
         } else {
             document.getElementById("onoff6").checked = false;
         }
-        if(switchstatus.light7 == "ON") {
+        if(switchstatus.light7 == "on") {
             document.getElementById("onoff7").checked = true;
         } else {
             document.getElementById("onoff7").checked = false;
         }
-        if(switchstatus.light8 == "ON") {
+        if(switchstatus.light8 == "on") {
             document.getElementById("onoff8").checked = true;
         } else {
             document.getElementById("onoff8").checked = false;
