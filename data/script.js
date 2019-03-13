@@ -84,6 +84,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.getElementById("brightness1").onchange = function (e) {
         document.getElementById("br1").innerHTML = e.target.value;
+        document.getElementById("onoff1").checked = true;
         var JsonData = { light: 1, state: "ON", brightness: Math.round(Number(e.target.value * 2.55)) };
         wsc.send(JSON.stringify(JsonData));
     }
@@ -100,6 +101,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.getElementById("brightness2").onchange = function (e) {
         document.getElementById("br2").innerHTML = e.target.value;
+        document.getElementById("onoff2").checked = true;
         var JsonData = { light: 2, state: "ON", brightness: Math.round(Number(e.target.value * 2.55)) };
         wsc.send(JSON.stringify(JsonData));
     }
@@ -116,6 +118,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.getElementById("brightness3").onchange = function (e) {
         document.getElementById("br3").innerHTML = e.target.value;
+        document.getElementById("onoff3").checked = true;
         var JsonData = { light: 3, state: "ON", brightness: Math.round(Number(e.target.value * 2.55)) };
         wsc.send(JSON.stringify(JsonData));
     }
@@ -132,6 +135,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.getElementById("brightness4").onchange = function (e) {
         document.getElementById("br4").innerHTML = e.target.value;
+        document.getElementById("onoff4").checked = true;
         var JsonData = { light: 4, state: "ON", brightness: Math.round(Number(e.target.value * 2.55)) };
         wsc.send(JSON.stringify(JsonData));
     }
@@ -148,6 +152,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.getElementById("brightness5").onchange = function (e) {
         document.getElementById("br5").innerHTML = e.target.value;
+        document.getElementById("onoff5").checked = true;
         var JsonData = { light: 5, state: "ON", brightness: Math.round(Number(e.target.value * 2.55)) };
         wsc.send(JSON.stringify(JsonData));
     }
@@ -164,6 +169,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.getElementById("brightness6").onchange = function (e) {
         document.getElementById("br6").innerHTML = e.target.value;
+        document.getElementById("onoff6").checked = true;
         var JsonData = { light: 6, state: "ON", brightness: Math.round(Number(e.target.value * 2.55)) };
         wsc.send(JSON.stringify(JsonData));
     }
@@ -180,6 +186,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.getElementById("brightness7").onchange = function (e) {
         document.getElementById("br7").innerHTML = e.target.value;
+        document.getElementById("onoff7").checked = true;
         var JsonData = { light: 7, state: "ON", brightness: Math.round(Number(e.target.value * 2.55)) };
         wsc.send(JSON.stringify(JsonData));
     }
@@ -196,6 +203,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     document.getElementById("brightness8").onchange = function (e) {
         document.getElementById("br8").innerHTML = e.target.value;
+        document.getElementById("onoff8").checked = true;
         var JsonData = { light: 8, state: "ON", brightness: Math.round(Number(e.target.value * 2.55)) };
         wsc.send(JSON.stringify(JsonData));
     }
