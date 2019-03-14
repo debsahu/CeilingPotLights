@@ -314,6 +314,8 @@ void processJson(String &payload)
       if (stateValue == "ON" or stateValue == "on")
       {
         Light[index].state = true;
+        if(!root.containsKey("brightness"))
+          Light[index].brightness = 255;
         shouldUpdateLights = true;
         sendMQTTStatusMsg();
         webSocket.broadcastTXT(statusMsg().c_str());
