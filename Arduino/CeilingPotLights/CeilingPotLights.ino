@@ -342,7 +342,7 @@ void processJson(String &payload)
 
   if (root.containsKey("master"))
   {
-    String stateValue = jsonBuffer["state"];
+    String stateValue = jsonBuffer["master"];
     if (stateValue == "ON" or stateValue == "on")
     {
       setAllOn();
