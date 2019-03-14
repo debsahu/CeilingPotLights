@@ -380,12 +380,12 @@ void sendAutoDiscoverySingle(String index, String &discovery_topic)
   {
     "name":"lights1",
     "schema":"template",
-    "state_topic": "home/aabbccddeeff/out",
-    "command_topic": "home/aabbccddeeff/in",
-    "brightness_template": "{{ value_json.light1b }}",
+    "state_topic": "ceiling/aabbccddeeff/out",
+    "command_topic": "ceiling/aabbccddeeff/in",
+    "brightness_template": "{{value_json.light1b}}",
     "command_on_template":"{'light':1,'state':'ON'{%- if brightness is defined -%},'brightness':{{ brightness|d }}{%- endif -%}}",
     "command_off_template":"{'light':1,'state':'OFF'}",
-    "state_template": "{{ value_json.light1 }}",
+    "state_template": "{{value_json.light1}}",
     "optimistic": false,
     "qos": 0
   }
@@ -423,8 +423,8 @@ void sendAutoDiscoverySwitch(String &discovery_topic)
   Sending data that looks like this >>
   {
     "name":"Ceiling Lights Master Switch",
-    "state_topic": "home/aabbccddeeff/out",
-    "command_topic": "home/aabbccddeeff/in",
+    "state_topic": "ceiling/aabbccddeeff_master/out",
+    "command_topic": "ceiling/aabbccddeeff_master/in",
     "payload_on":"{'master':'ON'}",
     "payload_off":"{'master':'OFF'}",
     "value_template": "{{ value_json.master }}",
