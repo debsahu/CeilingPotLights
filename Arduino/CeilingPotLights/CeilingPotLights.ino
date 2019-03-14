@@ -66,7 +66,6 @@ struct LED_LIGHTS
 } Light[MAX_DEVICES];
 
 char light_topic_in[100] = "", light_topic_out[100] = "";
-char master_topic_in[100] = "", master_topic_out[100] = "";
 
 char mqtt_client_name[100] = HOSTNAME;
 
@@ -206,6 +205,7 @@ void setAllOn(void)
 {
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
     Light[i].state = true;
+  lightsOn = true;
   //setLights();
 }
 
@@ -213,6 +213,7 @@ void setAllOff(void)
 {
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
     Light[i].state = false;
+  lightsOn = false;
   //setLights();
 }
 
@@ -267,8 +268,11 @@ void sendMQTTStatusMsg(void)
 
 void sendMQTTMasterStatusMsg(void)
 {
+  for (uint8_t i = 0; i < MAX_DEVICES; i++)
+    lightsOn = lightsOn or Light[i].state;
+
   Serial.print(F("Sending ["));
-  Serial.print(master_topic_out);
+  Serial.print(light_topic_out);
   Serial.print(F("] >> "));
 
   char master_status_msg[32] ="";
@@ -317,6 +321,7 @@ void processJson(String &payload)
         if(!root.containsKey("brightness"))
           Light[index].brightness = 255;
         shouldUpdateLights = true;
+        sendMQTTMasterStatusMsg();
         sendMQTTStatusMsg();
         webSocket.broadcastTXT(statusMsg().c_str());
       }
@@ -324,6 +329,7 @@ void processJson(String &payload)
       {
         Light[index].state = false;
         shouldUpdateLights = true;
+        sendMQTTMasterStatusMsg();
         sendMQTTStatusMsg();
         webSocket.broadcastTXT(statusMsg().c_str());
       }
@@ -335,6 +341,7 @@ void processJson(String &payload)
       if(!Light[index].brightness) // When brightness is 0, turn off light
         Light[index].state = false;
       shouldUpdateLights = true;
+      sendMQTTMasterStatusMsg();
       sendMQTTStatusMsg();
       webSocket.broadcastTXT(statusMsg().c_str());
     }
@@ -342,11 +349,10 @@ void processJson(String &payload)
 
   if (root.containsKey("master"))
   {
-    String stateValue = jsonBuffer["master"];
+    String stateValue = jsonBuffer["state"];
     if (stateValue == "ON" or stateValue == "on")
     {
       setAllOn();
-      lightsOn = true;
       shouldUpdateLights = true;
       sendMQTTMasterStatusMsg();
       sendMQTTStatusMsg();
@@ -355,7 +361,6 @@ void processJson(String &payload)
     else if (stateValue == "OFF" or stateValue == "off")
     {
       setAllOff();
-      lightsOn = false;
       shouldUpdateLights = true;
       sendMQTTMasterStatusMsg();
       sendMQTTStatusMsg();
@@ -423,11 +428,11 @@ void sendAutoDiscoverySwitch(String &discovery_topic)
   Sending data that looks like this >>
   {
     "name":"Ceiling Lights Master Switch",
-    "state_topic": "ceiling/aabbccddeeff_master/out",
-    "command_topic": "ceiling/aabbccddeeff_master/in",
+    "state_topic": "ceiling/aabbccddeeff/out",
+    "command_topic": "ceiling/aabbccddeeff/in",
     "payload_on":"{'master':'ON'}",
     "payload_off":"{'master':'OFF'}",
-    "value_template": "{{ value_json.master }}",
+    "value_template": "{{value_json.master}}",
     "state_on": "ON",
     "state_off": "OFF",
     "optimistic": false,
@@ -440,8 +445,8 @@ void sendAutoDiscoverySwitch(String &discovery_topic)
   DynamicJsonDocument json(capacity);
 
   json["name"] = String(HOSTNAME)+" Master Switch";
-  json["state_topic"] = master_topic_out;
-  json["command_topic"] = master_topic_in;
+  json["state_topic"] = light_topic_out;
+  json["command_topic"] = light_topic_in;
   json["payload_on"] = "{'master':'ON'}";
   json["payload_off"] = "{'master':'OFF'}";
   json["value_template"] = "{{value_json.master}}";
@@ -493,7 +498,6 @@ void connect_mqtt(void)
   Serial.println(F("connected!"));
 
   client.subscribe(light_topic_in);      //subscribe to incoming topic
-  client.subscribe(master_topic_in);     //subscribe to master switch topic
 #ifdef HA_AUTO_DISCOVERY
   sendAutoDiscovery();                   //send auto-discovery topics
 #endif
@@ -757,8 +761,6 @@ void setup()
   sprintf(mqtt_client_name, "%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], HOSTNAME);
   sprintf(light_topic_in, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/in");
   sprintf(light_topic_out, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/out");
-  sprintf(master_topic_in, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "_master/in");
-  sprintf(master_topic_out, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "_master/out");
 
   client.begin(mqtt_server, atoi(mqtt_port), net);
   client.onMessage(messageReceived);
