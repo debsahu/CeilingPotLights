@@ -17,12 +17,16 @@
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager/archive/development.zip
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson/releases/download/v6.8.0-beta/ArduinoJson-v6.8.0-beta.zip
 #include <WebSocketsServer.h>     //https://github.com/Links2004/arduinoWebSockets
+#include <OneWire.h>              //https://github.com/PaulStoffregen/OneWire
+#include <DallasTemperature.h>    //https://github.com/milesburton/Arduino-Temperature-Control-Library
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define HOSTNAME "CeilingLights"
 
 #define MAX_DEVICES 8
+
+#define ONE_WIRE_BUS 2 // assumes that DS18B20 is connected to GPIO2, change accordingly
 
 char mqtt_server[40] = "192.168.0.xxx";
 char mqtt_username[40] = "";
@@ -53,6 +57,8 @@ WiFiClient net;
 MQTTClient client(512);
 Ticker sendStat;
 DNSServer dns;
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
 
 /*****************  GLOBAL VARIABLES  ************************************/
 
@@ -65,7 +71,7 @@ struct LED_LIGHTS
   uint8_t resolution = 8;
 } Light[MAX_DEVICES];
 
-char light_topic_in[100] = "", light_topic_out[100] = "";
+char light_topic_in[100] = "", light_topic_out[100] = "", sensor_topic_out[100] = "";
 
 char mqtt_client_name[100] = HOSTNAME;
 
@@ -73,7 +79,7 @@ bool shouldSaveConfig = false;
 bool shouldUpdateLights = false;
 bool shouldReboot = false;
 
-unsigned long lastMillis = 0;
+unsigned long lastMillis = 0, lastTempUpdate = 0;
 char NameChipId[64] = {0}, chipId[9] = {0};
 
 IPAddress apIP(192, 168, 4, 1);
@@ -224,6 +230,7 @@ String statusMsg(void)
   /*
   Will send out something like this:
   {
+    "master":"OFF",
     "light1":"off",
     "light2":"off",
     "light3":"off",
@@ -243,7 +250,13 @@ String statusMsg(void)
   }
   */
 
-  DynamicJsonDocument json(JSON_OBJECT_SIZE(MAX_DEVICES*2) + 600);
+  DynamicJsonDocument json(JSON_OBJECT_SIZE(MAX_DEVICES*2 + 1) + 600);
+
+  for (uint8_t i = 0; i < MAX_DEVICES; i++)
+    lightsOn = lightsOn or Light[i].state;
+  
+  json["master"] = lightsOn ? "ON" : "OFF";
+
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
   {
     String l_name = "light" + String(i + 1);
@@ -264,25 +277,6 @@ void sendMQTTStatusMsg(void)
   Serial.println(statusMsg());
   client.publish(light_topic_out, statusMsg(), true, 0);
   sendStat.detach();
-}
-
-void sendMQTTMasterStatusMsg(void)
-{
-  for (uint8_t i = 0; i < MAX_DEVICES; i++)
-    lightsOn = lightsOn or Light[i].state;
-
-  Serial.print(F("Sending ["));
-  Serial.print(light_topic_out);
-  Serial.print(F("] >> "));
-
-  char master_status_msg[32] ="";
-  if (lightsOn) 
-    sprintf(master_status_msg, "%s", "{'master':'ON'}");
-  else
-    sprintf(master_status_msg, "%s", "{'master':'OFF'}");
-
-  Serial.println(master_status_msg);
-  client.publish(light_topic_out, master_status_msg, true, 0);
 }
 
 void processJson(String &payload)
@@ -321,7 +315,6 @@ void processJson(String &payload)
         if(!root.containsKey("brightness"))
           Light[index].brightness = 255;
         shouldUpdateLights = true;
-        sendMQTTMasterStatusMsg();
         sendMQTTStatusMsg();
         webSocket.broadcastTXT(statusMsg().c_str());
       }
@@ -329,7 +322,6 @@ void processJson(String &payload)
       {
         Light[index].state = false;
         shouldUpdateLights = true;
-        sendMQTTMasterStatusMsg();
         sendMQTTStatusMsg();
         webSocket.broadcastTXT(statusMsg().c_str());
       }
@@ -341,7 +333,6 @@ void processJson(String &payload)
       if(!Light[index].brightness) // When brightness is 0, turn off light
         Light[index].state = false;
       shouldUpdateLights = true;
-      sendMQTTMasterStatusMsg();
       sendMQTTStatusMsg();
       webSocket.broadcastTXT(statusMsg().c_str());
     }
@@ -354,7 +345,6 @@ void processJson(String &payload)
     {
       setAllOn();
       shouldUpdateLights = true;
-      sendMQTTMasterStatusMsg();
       sendMQTTStatusMsg();
       webSocket.broadcastTXT(statusMsg().c_str());
     }
@@ -362,7 +352,6 @@ void processJson(String &payload)
     {
       setAllOff();
       shouldUpdateLights = true;
-      sendMQTTMasterStatusMsg();
       sendMQTTStatusMsg();
       webSocket.broadcastTXT(statusMsg().c_str());
     }
@@ -466,12 +455,65 @@ void sendAutoDiscoverySwitch(String &discovery_topic)
   Serial.println();
 }
 
+void sendAutoDiscoverySensor(String &discovery_topic, bool unitsC=true)
+{
+  /*
+  "discovery topic" >> "homeassistant/sensor/XXXXXXXXXXXXXXXX/config"
+
+  Sending data that looks like this >>
+  {
+    "name":"Ceiling Lights Master Switch Temperature C",
+    "device_class": "temperature",
+    "state_topic": "ceiling/aabbccddeeff/out",
+    "unit_of_measurement": "°C", 
+    "value_template": "{{value_json.tempC}}"
+  }
+
+  {
+    "name":"Ceiling Lights Master Switch Temperature F",
+    "device_class": "temperature",
+    "state_topic": "ceiling/aabbccddeeff/out",
+    "unit_of_measurement": "F", 
+    "value_template": "{{value_json.tempF}}"
+  }
+  */
+
+  const size_t capacity = JSON_OBJECT_SIZE(5) + 500;
+  DynamicJsonDocument json(capacity);
+
+  json["state_topic"] = sensor_topic_out;
+  json["device_class"] = "temperature";
+  if (unitsC)
+  {
+    json["name"] = String(HOSTNAME)+" Master Switch Temperature C";
+    json["unit_of_measurement"] = "°C";
+    json["value_template"] = "{{value_json.tempC}}";
+  }
+  else
+  {
+    json["name"] = String(HOSTNAME)+" Master Switch Temperature F";
+    json["unit_of_measurement"] = "F";
+    json["value_template"] = "{{value_json.tempF}}";
+  }
+
+  String msg_str;
+  Serial.print(F("Sending AD MQTT ["));
+  Serial.print(discovery_topic);
+  Serial.print(F("] >> "));
+  serializeJson(json, Serial);
+  serializeJson(json, msg_str);
+  client.publish(discovery_topic, msg_str, true, 0);
+  Serial.println();
+}
+
 void sendAutoDiscovery(void)
 {
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
     sendAutoDiscoverySingle(String(i + 1), "homeassistant/light/" + String(HOSTNAME) + String(i + 1) + "/config");
 
   sendAutoDiscoverySwitch("homeassistant/switch/" + String(HOSTNAME) + "/config");
+  sendAutoDiscoverySensor("homeassistant/sensor/" + String(HOSTNAME) + "/config", true); // °C
+  sendAutoDiscoverySensor("homeassistant/sensor/" + String(HOSTNAME) + "/config", false); // F
 }
 #endif
 
@@ -677,6 +719,30 @@ void checkSwitch()
   }
 }
 
+
+void getTemperature(void) 
+{
+  Serial.print("Requesting temperatures...");
+  sensors.requestTemperatures(); // Send the command to get temperatures
+  Serial.println("DONE");
+  float tempC = sensors.getTempCByIndex(0);
+  float tempF = sensors.getTempFByIndex(0);
+
+  if(tempC != DEVICE_DISCONNECTED_C) // Check if reading was successful
+  {
+    Serial.printf("Temperature %2.2f°C %2.2fF", tempC, tempF);
+    DynamicJsonDocument json(JSON_OBJECT_SIZE(2) + 100);
+    json["tempC"] = tempC;
+    json["tempF"] = tempF;
+    String msg_str;
+    serializeJson(json, msg_str);
+    client.publish(sensor_topic_out, msg_str, false, 0);
+  } 
+  else
+  {
+    Serial.println("Error: Could not read temperature data");
+  }
+}
 // /****************************  SETUP  ****************************************/
 
 void setup()
@@ -684,6 +750,8 @@ void setup()
   EEPROM.begin(512);
   Serial.begin(115200);
   delay(10);
+
+  sensors.begin();
 
   initLights();
   readEEPROM();
@@ -761,7 +829,7 @@ void setup()
   sprintf(mqtt_client_name, "%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], HOSTNAME);
   sprintf(light_topic_in, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/in");
   sprintf(light_topic_out, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/out");
-
+  sprintf(sensor_topic_out, "ceiling/%02X%02X%02X%02X%02X%02X%s", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], "/temp");
   client.begin(mqtt_server, atoi(mqtt_port), net);
   client.onMessage(messageReceived);
 
@@ -877,5 +945,11 @@ void loop()
     }
   } else {
     client.loop();
+  }
+
+  if(millis() - lastTempUpdate > 30000) //every 30s
+  {
+    lastTempUpdate = millis();
+    getTemperature();
   }
 }
