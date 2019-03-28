@@ -13,3 +13,15 @@ ESP32 controlling 8 Lights using LEDC and communicates with Home Assistant
 - [x] MQTT Auto-reconnect (non-blocking)
 - [ ] Switch topic for MQTT
 - [ ] Add Temperature Sensor
+
+__________________________________________________________________________________________________________________________________________
+__________________________________________________________________________________________________________________________________________
+
+Home Assistant Yaml file 
+## Temperature sensor
+- platform: mqtt  
+  state_topic: "ceiling/Your_Mac_Address/temp"  
+  name: "SN3 Temperature"  
+  device_class: "temperature"
+  unit_of_measurement: "°F"  
+  value_template: '{{ value_json.tempF}}'
