@@ -36,7 +36,7 @@ char mqtt_port[6] = "1883";
 char AP_PASS[32] = "TouchLights"; // AP Password
 const byte DNS_PORT = 53;
 
-uint8_t light_pin[MAX_DEVICES] = {16, 4, 32, 33, 5, 14, 27, 26};
+uint8_t light_pin[MAX_DEVICES] = {5, 14, 27, 26, 4, 16, 33, 32};
 
 const uint8_t light_bri_cycle[] = {15, 95, 175, 255};
 
