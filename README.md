@@ -25,6 +25,7 @@ ________________________________________________________________________________
   name: "SN3 Temperature"  
   device_class: "temperature"
   unit_of_measurement: "°F"  
-  Have to pick one
+  Have to pick one 
+  One will round up One will not
   value_template: '{{ value_json.tempF}}'
-  value_template: '{{ value_json.tempF | round(1) }}'   ## TO Round Up
+  value_template: '{{ value_json.tempF | round(1) }}' 
