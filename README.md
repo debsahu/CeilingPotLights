@@ -17,7 +17,8 @@ ESP32 controlling 8 Lights using LEDC and communicates with Home Assistant
 __________________________________________________________________________________________________________________________________________
 __________________________________________________________________________________________________________________________________________
 
-Home Assistant Yaml file 
+# Home Assistant Yaml file
+
 ## Temperature sensor
 - platform: mqtt  
   state_topic: "ceiling/Your_Mac_Address/temp"  
