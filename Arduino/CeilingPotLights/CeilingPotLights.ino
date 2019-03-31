@@ -38,7 +38,7 @@ const byte DNS_PORT = 53;
 
 uint8_t light_pin[MAX_DEVICES] = {5, 14, 27, 26, 4, 16, 33, 32};
 
-const uint8_t light_bri_cycle[] = {15, 95, 175, 255};
+const uint8_t light_bri_cycle[] = {4, 20, 100, 255};
 
 const uint8_t switchPin = 22;
 
