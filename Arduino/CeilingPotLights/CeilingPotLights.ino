@@ -743,10 +743,23 @@ void getTemperature(void)
     Serial.println("Error: Could not read temperature data");
   }
 }
+
+void ButtonTask(void * param) {
+  while (true) {
+    checkSwitch();
+    delay(1);
+    // delay(5000);
+    // if (WiFi.status() != WL_CONNECTED) {
+    //   WiFi.begin();
+    // }
+  }
+}
+
 // /****************************  SETUP  ****************************************/
 
 void setup()
 {
+  xTaskCreatePinnedToCore(ButtonTask, "ButtonTask", 10000, NULL, 5, NULL, 0);
   EEPROM.begin(512);
   Serial.begin(115200);
   delay(10);
@@ -928,7 +941,7 @@ void loop()
   ArduinoOTA.handle();
   server.handleClient();
   webSocket.loop();
-  checkSwitch();
+  // checkSwitch();
 
   if (shouldReboot)
   {
