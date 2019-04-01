@@ -290,7 +290,7 @@ void processJson(String &payload)
   }
   */
 
-  DynamicJsonDocument jsonBuffer(JSON_OBJECT_SIZE(3) + 100);
+  DynamicJsonDocument jsonBuffer(JSON_OBJECT_SIZE(6) + 100);
   DeserializationError error = deserializeJson(jsonBuffer, payload);
   if (error)
   {
@@ -355,6 +355,30 @@ void processJson(String &payload)
       sendMQTTStatusMsg();
       webSocket.broadcastTXT(statusMsg().c_str());
     }
+  }
+
+  if(root.containsKey("masterbri"))
+  {
+    uint8_t masterBrightness = (uint8_t) jsonBuffer["masterbri"];
+    if(masterBrightness)
+    {
+      for(uint8_t i = 0; i < MAX_DEVICES; i++)
+      {
+        Light[i].brightness = masterBrightness;
+        Light[i].state = true;
+      }
+    }
+    else
+    {
+      for(uint8_t i = 0; i < MAX_DEVICES; i++)
+      {
+        Light[i].brightness = 0;
+        Light[i].state = false;
+      }
+    }
+    shouldUpdateLights = true;
+    sendMQTTStatusMsg();
+    webSocket.broadcastTXT(statusMsg().c_str());
   }
 }
 
@@ -473,7 +497,7 @@ void sendAutoDiscoverySensor(String &discovery_topic, bool unitsC=true)
     "name":"Ceiling Lights Master Switch Temperature F",
     "device_class": "temperature",
     "state_topic": "ceiling/aabbccddeeff/out",
-    "unit_of_measurement": "F", 
+    "unit_of_measurement": "°F", 
     "value_template": "{{value_json.tempF}}"
   }
   */
@@ -492,7 +516,7 @@ void sendAutoDiscoverySensor(String &discovery_topic, bool unitsC=true)
   else
   {
     json["name"] = String(HOSTNAME)+" Master Switch Temperature F";
-    json["unit_of_measurement"] = "F";
+    json["unit_of_measurement"] = "°F";
     json["value_template"] = "{{value_json.tempF}}";
   }
 
