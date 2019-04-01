@@ -246,14 +246,25 @@ String statusMsg(void)
     "light5b": 255,
     "light6b": 255,
     "light7b": 255,
-    "light8b": 255
+    "light8b": 255,
+    "master": "ON",
+    "masterbri":255
   }
   */
 
-  DynamicJsonDocument json(JSON_OBJECT_SIZE(MAX_DEVICES*2 + 1) + 600);
+  DynamicJsonDocument json(JSON_OBJECT_SIZE(MAX_DEVICES*2 + 2) + 600);
 
+  uint32_t masterBrightness = 0;
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
+  {
     lightsOn = lightsOn or Light[i].state;
+    masterBrightness += Light[i].brightness;
+  }
+
+  if(masterBrightness)
+    masterBrightness = masterBrightness / MAX_DEVICES; //send out average brightness if some of the lights are on.
+
+  json["masterbri"] = masterBrightness;
   
   json["master"] = lightsOn ? "ON" : "OFF";
 
@@ -404,6 +415,23 @@ void sendAutoDiscoverySingle(String index, String &discovery_topic)
     "command_on_template":"{'light':1,'state':'ON'{%- if brightness is defined -%},'brightness':{{ brightness|d }}{%- endif -%}}",
     "command_off_template":"{'light':1,'state':'OFF'}",
     "state_template": "{{value_json.light1}}",
+    "optimistic": false,
+    "qos": 0
+  }
+  */
+
+  /*
+
+  NOTE: THIS IS NOT SENT, ONLY MENTIONED HERE FOR REFERANCE
+   {
+    "name":"lights master",
+    "schema":"template",
+    "state_topic": "ceiling/aabbccddeeff/out",
+    "command_topic": "ceiling/aabbccddeeff/in",
+    "brightness_template": "{{value_json.masterbri}}",
+    "command_on_template":"{'master':'ON'{%- if brightness is defined -%},'masterbri':{{ brightness|d }}{%- endif -%}}",
+    "command_off_template":"{'master':'OFF'}",
+    "state_template": "{{value_json.master}}",
     "optimistic": false,
     "qos": 0
   }
