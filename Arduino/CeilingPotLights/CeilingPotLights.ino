@@ -24,7 +24,7 @@
 
 #define HOSTNAME "CeilingLights"
 
-#define MAX_DEVICES 8
+#define MAX_DEVICES 9
 
 #define ONE_WIRE_BUS 2 // assumes that DS18B20 is connected to GPIO2, change accordingly
 
@@ -229,8 +229,8 @@ String statusMsg(void)
 {
   /*
   Will send out something like this:
-  {
-    "master":"OFF",
+  {  
+    "master":"off",
     "light1":"off",
     "light2":"off",
     "light3":"off",
@@ -239,6 +239,7 @@ String statusMsg(void)
     "light6":"off",
     "light7":"off",
     "light8":"off",
+    "masterbri": 255,
     "light1b": 255,
     "light2b": 255,
     "light3b": 255,
@@ -247,8 +248,6 @@ String statusMsg(void)
     "light6b": 255,
     "light7b": 255,
     "light8b": 255,
-    "master": "ON",
-    "masterbri":255
   }
   */
 
@@ -264,10 +263,11 @@ String statusMsg(void)
   if(masterBrightness)
     masterBrightness = masterBrightness / MAX_DEVICES; //send out average brightness if some of the lights are on.
 
+  json["master"] = lightsOn ? "on" : "off";
+  
   json["masterbri"] = masterBrightness;
   
-  json["master"] = lightsOn ? "ON" : "OFF";
-
+  
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
   {
     String l_name = "light" + String(i + 1);
