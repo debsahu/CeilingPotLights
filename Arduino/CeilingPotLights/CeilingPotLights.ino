@@ -254,6 +254,7 @@ String statusMsg(void)
   DynamicJsonDocument json(JSON_OBJECT_SIZE(MAX_DEVICES*2 + 2) + 600);
 
   uint32_t masterBrightness = 0;
+    lightsOn = false;    
   for (uint8_t i = 0; i < MAX_DEVICES; i++)
   {
     lightsOn = lightsOn or Light[i].state;
