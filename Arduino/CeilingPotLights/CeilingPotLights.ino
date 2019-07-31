@@ -24,7 +24,7 @@
 
 #define HOSTNAME "CeilingLights"
 
-#define MAX_DEVICES 9
+#define MAX_DEVICES 8
 
 #define ONE_WIRE_BUS 2 // assumes that DS18B20 is connected to GPIO2, change accordingly
 
@@ -759,7 +759,7 @@ void checkSwitch()
         for(uint8_t i=0; i<MAX_DEVICES; i++)
         {
           Light[i].state = false;
-          Light[i].brightness = 0;
+          Light[i].brightness = 255;
         }
         setLights();
         sendMQTTStatusMsg();
