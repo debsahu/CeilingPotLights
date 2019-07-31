@@ -26,7 +26,7 @@
 
 #define MAX_DEVICES 8
 
-#define ONE_WIRE_BUS 2 // assumes that DS18B20 is connected to GPIO2, change accordingly
+#define ONE_WIRE_BUS 18 // assumes that DS18B20 is connected to GPIO2, change accordingly
 
 char mqtt_server[40] = "192.168.0.xxx";
 char mqtt_username[40] = "";
