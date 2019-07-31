@@ -20,7 +20,6 @@ ________________________________________________________________________________
 # Home Assistant Yaml File
 
 ## Temperature sensor
-
 platform: mqtt
 name: "Ceiling Lights Master"
 device_class: "temperature"
