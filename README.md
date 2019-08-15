@@ -20,9 +20,9 @@ ________________________________________________________________________________
 # Home Assistant Yaml File
 
 ## Temperature sensor
-- platform: mqtt  
-  state_topic: "ceiling/Your_Mac_Address/temp"  
-  name: "SN3 Temperature"  
-  device_class: "temperature"
-  unit_of_measurement: "°F"  
-  value_template: '{{ value_json.tempF | round(1) }}' 
+- platform: mqtt
+- name: "Ceiling Lights Master"
+- device_class: "temperature"
+- state_topic: "ceiling/Your_Mac_Address/temp"
+- unit_of_measurement: "°F"
+- value_template: '{{ value_json.tempF | round(1) }}'
